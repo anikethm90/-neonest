@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeoNest • Shared Living</title>
+
+  <!-- PWA Settings -->
+  <meta name="theme-color" content="#18181b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <script>
+    // Inline Manifest for single HTML file
+    const manifest = {
+      "name": "NeoNest - Shared Living",
+      "short_name": "NeoNest",
+      "description": "Chore tracker and grocery list for 7 members",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#18181b",
+      "theme_color": "#3b82f6",
+      "orientation": "portrait-primary",
+      "icons": [
+        { "src": "https://via.placeholder.com/192x192/3b82f6/ffffff?text=N", "sizes": "192x192", "type": "image/png" },
+        { "src": "https://via.placeholder.com/512x512/3b82f6/ffffff?text=N", "sizes": "512x512", "type": "image/png" }
+      ]
+    };
+
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(manifest));
+    document.head.appendChild(link);
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    .neon-blue {
+      text-shadow: 0 0 10px #3b82f6;
+    }
+
+    .task-card {
+      transition: all 0.3s ease;
+    }
+
+    .task-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+    }
+
+    /* Install Modal */
+    #installModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+
+    #installModal.open {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .modal-card {
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 1.5rem;
+      padding: 2rem;
+      max-width: 420px;
+      width: 90%;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(30px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .platform-tab {
+      cursor: pointer;
+      padding: 0.5rem 1.25rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      color: #a1a1aa;
+    }
+
+    .platform-tab.active {
+      background: #3b82f6;
+      color: #fff;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.875rem;
+      margin-bottom: 1rem;
+    }
+
+    .step-num {
+      min-width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 50%;
+      background: #3b82f6;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .download-btn-sidebar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 1rem;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 18px rgba(59, 130, 246, 0.35);
+    }
+
+    .download-btn-sidebar:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 28px rgba(59, 130, 246, 0.55);
+    }
+  </style>
+</head>
+
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
+
+  <!-- Sidebar -->
+  <div class="fixed left-0 top-0 h-full w-64 bg-zinc-900 border-r border-zinc-800 p-6 flex flex-col">
+    <div class="flex items-center gap-3 mb-12">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-2xl font-bold neon-blue">N
+      </div>
+      <h1 class="text-3xl font-semibold tracking-tight">NeoNest</h1>
+    </div>
+
+    <nav class="space-y-2 flex-1">
+      <a href="#" onclick="showSection('dashboard')"
+        class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-zinc-800 text-blue-400 font-medium">
+        <i class="fas fa-home"></i> Dashboard
+      </a>
+      <a href="#" onclick="showSection('chores')"
+        class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-zinc-800">
+        <i class="fas fa-list-check"></i> Chore Tracker
+      </a>
+      <a href="#" onclick="showSection('grocery')"
+        class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-zinc-800">
+        <i class="fas fa-shopping-cart"></i> Grocery List
+      </a>
+      <a href="#" onclick="showSection('members')"
+        class="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-zinc-800">
+        <i class="fas fa-users"></i> Members
+      </a>
+    </nav>
+
+    <!-- Download / Install App Button -->
+    <div class="mt-6">
+      <button id="getAppBtn" onclick="openInstallModal()" class="download-btn-sidebar">
+        <i class="fas fa-mobile-screen-button text-lg"></i>
+        <span>Get the App</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Install App Modal -->
+  <div id="installModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"
+    onclick="closeModalOnBackdrop(event)">
+    <div class="modal-card">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xl font-bold">N</div>
+          <div>
+            <h2 id="modalTitle" class="text-lg font-bold text-white">Install NeoNest</h2>
+            <p class="text-xs text-zinc-400">Add to your home screen</p>
+          </div>
+        </div>
+        <button onclick="closeInstallModal()" class="text-zinc-500 hover:text-white text-xl leading-none"
+          aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Platform Tabs -->
+      <div class="flex gap-2 mb-5 bg-zinc-900 p-1 rounded-full">
+        <button id="tabAndroid" class="platform-tab active" onclick="switchTab('android')"><i
+            class="fab fa-android mr-1"></i>Android</button>
+        <button id="tabIos" class="platform-tab" onclick="switchTab('ios')"><i
+            class="fab fa-apple mr-1"></i>iOS</button>
+      </div>
+
+      <!-- Android Steps -->
+      <div id="stepsAndroid">
+        <div id="nativeInstallWrap" class="mb-4 hidden">
+          <button onclick="installApp()"
+            class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-2xl flex items-center justify-center gap-2 transition-colors">
+            <i class="fas fa-download"></i> Install Now
+          </button>
+          <p class="text-center text-xs text-zinc-500 mt-2">Or follow the steps below</p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <p class="text-sm text-zinc-300">Open <strong class="text-white">NeoNest</strong> in <strong
+              class="text-white">Google Chrome</strong> on your Android device.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <p class="text-sm text-zinc-300">Tap the <strong class="text-white">three-dot menu</strong> <i
+              class="fas fa-ellipsis-vertical text-zinc-400"></i> in the top-right corner.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <p class="text-sm text-zinc-300">Select <strong class="text-white">"Add to Home screen"</strong> or <strong
+              class="text-white">"Install app"</strong>.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <p class="text-sm text-zinc-300">Tap <strong class="text-white">Install</strong> to confirm. NeoNest will
+            appear on your home screen!</p>
+        </div>
+      </div>
+
+      <!-- iOS Steps -->
+      <div id="stepsIos" class="hidden">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <p class="text-sm text-zinc-300">Open <strong class="text-white">NeoNest</strong> in <strong
+              class="text-white">Safari</strong> on your iPhone or iPad.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <p class="text-sm text-zinc-300">Tap the <strong class="text-white">Share</strong> button <i
+              class="fas fa-arrow-up-from-bracket text-zinc-400"></i> at the bottom of the screen.</p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <p class="text-sm text-zinc-300">Scroll down and tap <strong class="text-white">"Add to Home Screen"</strong>.
+          </p>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <p class="text-sm text-zinc-300">Tap <strong class="text-white">Add</strong> in the top-right corner. Done!
+          </p>
+        </div>
+      </div>
+
+      <p class="text-xs text-zinc-500 mt-4 text-center">NeoNest works offline after installation ✓</p>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="ml-64 p-8">
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="section">
+      <div class="flex justify-between items-center mb-8">
+        <h2 class="text-4xl font-semibold">Good evening, Team</h2>
+        <button onclick="installApp()" id="installBtn"
+          class="hidden bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-2xl font-medium flex items-center gap-2">
+          <i class="fas fa-download"></i> Install on Phone
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
+          <p class="text-zinc-400 text-sm">Today's Date</p>
+          <p id="current-date" class="text-3xl font-medium mt-2"></p>
+        </div>
+        <div class="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
+          <p class="text-zinc-400 text-sm">Pending Chores</p>
+          <p id="pending-count" class="text-5xl font-bold text-blue-400 mt-2">3</p>
+        </div>
+        <div class="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
+          <p class="text-zinc-400 text-sm">Grocery Items Needed</p>
+          <p id="grocery-count" class="text-5xl font-bold text-blue-400 mt-2">7</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-xl font-semibold mb-4 flex items-center gap-2"><i class="fas fa-clock"></i> Today's Tasks</h3>
+          <div id="upcoming-tasks" class="space-y-4"></div>
+        </div>
+        <div>
+          <h3 class="text-xl font-semibold mb-4 flex items-center gap-2"><i class="fas fa-chart-simple"></i> Chore
+            Status</h3>
+          <div id="chore-status" class="bg-zinc-900 rounded-3xl p-6 border border-zinc-800"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chores Section -->
+    <div id="chores" class="section hidden">
+      <h2 class="text-3xl font-semibold mb-6">Daily Chore Tracker</h2>
+      <div id="chores-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+    </div>
+
+    <!-- Grocery Section -->
+    <div id="grocery" class="section hidden">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-3xl font-semibold">Grocery List</h2>
+        <button onclick="addGroceryItem()"
+          class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-2xl font-medium flex items-center gap-2">
+          <i class="fas fa-plus"></i> Add Item
+        </button>
+      </div>
+      <div class="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
+        <div id="grocery-list" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- Members Section -->
+    <div id="members" class="section hidden">
+      <h2 class="text-3xl font-semibold mb-6">House Members (7)</h2>
+      <div id="members-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+    </div>
+  </div>
+
+  <script>
+    // Members Data
+    const members = [
+      { id: 1, name: "Rahul Sharma", role: "Student", color: "#3b82f6" },
+      { id: 2, name: "Priya Nair", role: "Student", color: "#8b5cf6" },
+      { id: 3, name: "Arjun Rao", role: "Software Engineer", color: "#06b67f" },
+      { id: 4, name: "Sneha Patel", role: "Data Analyst", color: "#f59e0b" },
+      { id: 5, name: "Karthik Menon", role: "Product Manager", color: "#ec4899" },
+      { id: 6, name: "Ananya Reddy", role: "Marketing Executive", color: "#14b8a6" },
+      { id: 7, name: "Vikram Singh", role: "DevOps Engineer", color: "#f43f5e" }
+    ];
+
+    // In-memory data
+    let chores = [
+      { id: 1, task: "Cooking Dinner", assigned: "Rahul Sharma", status: "pending" },
+      { id: 2, task: "Washing Vessels", assigned: "Priya Nair", status: "pending" },
+      { id: 3, task: "Cleaning Common Area", assigned: "Arjun Rao", status: "done" },
+      { id: 4, task: "Garbage Management", assigned: "Sneha Patel", status: "pending" },
+      { id: 5, task: "Drinking Water Refill", assigned: "Karthik Menon", status: "pending" }
+    ];
+
+    let groceryItems = [
+      { id: 1, item: "Milk (2L)", category: "Dairy", addedBy: "Priya Nair", bought: false },
+      { id: 2, item: "Tomatoes & Onions", category: "Vegetables", addedBy: "Rahul Sharma", bought: true },
+      { id: 3, item: "Dishwashing Liquid", category: "Cleaning Supplies", addedBy: "Arjun Rao", bought: false }
+    ];
+
+    let deferredPrompt;
+
+    // PWA Install Logic
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // Show the native install button inside the modal
+      document.getElementById('nativeInstallWrap').classList.remove('hidden');
+      // Also show old header button (kept for backward compat)
+      const oldBtn = document.getElementById('installBtn');
+      if (oldBtn) oldBtn.classList.remove('hidden');
+    });
+
+    function installApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choice) => {
+          if (choice.outcome === 'accepted') {
+            document.getElementById('nativeInstallWrap').classList.add('hidden');
+            const oldBtn = document.getElementById('installBtn');
+            if (oldBtn) oldBtn.classList.add('hidden');
+            closeInstallModal();
+          }
+          deferredPrompt = null;
+        });
+      }
+    }
+
+    // Modal helpers
+    function openInstallModal() {
+      // Auto-detect iOS and pre-select that tab
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      switchTab(isIos ? 'ios' : 'android');
+      document.getElementById('installModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeInstallModal() {
+      document.getElementById('installModal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function closeModalOnBackdrop(e) {
+      if (e.target === document.getElementById('installModal')) closeInstallModal();
+    }
+
+    function switchTab(platform) {
+      document.getElementById('stepsAndroid').classList.toggle('hidden', platform !== 'android');
+      document.getElementById('stepsIos').classList.toggle('hidden', platform !== 'ios');
+      document.getElementById('tabAndroid').classList.toggle('active', platform === 'android');
+      document.getElementById('tabIos').classList.toggle('active', platform === 'ios');
+    }
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeInstallModal();
+    });
+
+    function showSection(section) {
+      document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+      document.getElementById(section).classList.remove('hidden');
+
+      if (section === 'dashboard') renderDashboard();
+      if (section === 'chores') renderChores();
+      if (section === 'grocery') renderGrocery();
+      if (section === 'members') renderMembers();
+    }
+
+    function renderDashboard() {
+      document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' });
+
+      const pending = chores.filter(c => c.status === 'pending').length;
+      document.getElementById('pending-count').textContent = pending;
+      document.getElementById('grocery-count').textContent = groceryItems.filter(g => !g.bought).length;
+
+      let html = '';
+      chores.slice(0, 4).forEach(chore => {
+        html += `
+          <div class="bg-zinc-900 rounded-2xl p-5 flex justify-between items-center task-card border border-zinc-800">
+            <div>
+              <p class="font-medium">${chore.task}</p>
+              <p class="text-sm text-zinc-400">${chore.assigned}</p>
+            </div>
+            <button onclick="markDone(${chore.id})" class="px-5 py-2 rounded-xl ${chore.status === 'done' ? 'bg-emerald-500' : 'bg-blue-600 hover:bg-blue-500'} text-sm font-medium">
+              ${chore.status === 'done' ? '✓ Done' : 'Mark Done'}
+            </button>
+          </div>`;
+      });
+      document.getElementById('upcoming-tasks').innerHTML = html;
+
+      let statusHTML = '<div class="space-y-4">';
+      chores.forEach(chore => {
+        statusHTML += `
+          <div class="flex justify-between items-center">
+            <span>${chore.task}</span>
+            <span class="text-xs px-3 py-1 rounded-full ${chore.status === 'done' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">
+              ${chore.assigned}
+            </span>
+          </div>`;
+      });
+      statusHTML += '</div>';
+      document.getElementById('chore-status').innerHTML = statusHTML;
+    }
+
+    function renderChores() {
+      let html = '';
+      chores.forEach(chore => {
+        html += `
+          <div class="bg-zinc-900 rounded-3xl p-6 border border-zinc-800 task-card">
+            <div class="flex justify-between">
+              <div>
+                <h4 class="font-semibold text-lg">${chore.task}</h4>
+                <p class="text-zinc-400 text-sm mt-1">Assigned to: <span class="font-medium">${chore.assigned}</span></p>
+              </div>
+              <button onclick="markDone(${chore.id})" class="h-10 w-10 rounded-2xl flex items-center justify-center ${chore.status === 'done' ? 'bg-emerald-500 text-white' : 'bg-zinc-800 hover:bg-blue-600'}">
+                ${chore.status === 'done' ? '✓' : '<i class="fas fa-check"></i>'}
+              </button>
+            </div>
+          </div>`;
+      });
+      document.getElementById('chores-list').innerHTML = html;
+    }
+
+    function markDone(id) {
+      const chore = chores.find(c => c.id === id);
+      if (chore) {
+        chore.status = chore.status === 'done' ? 'pending' : 'done';
+        renderChores();
+        renderDashboard();
+      }
+    }
+
+    function renderGrocery() {
+      let html = '';
+      groceryItems.forEach(item => {
+        html += `
+          <div class="flex items-center justify-between bg-zinc-800 rounded-2xl p-4 ${item.bought ? 'opacity-60 line-through' : ''}">
+            <div class="flex items-center gap-4">
+              <input type="checkbox" ${item.bought ? 'checked' : ''} onchange="toggleBought(${item.id})" class="w-5 h-5 accent-blue-500">
+              <div>
+                <p class="font-medium">${item.item}</p>
+                <p class="text-xs text-zinc-500">${item.category} • Added by ${item.addedBy}</p>
+              </div>
+            </div>
+            <button onclick="deleteGrocery(${item.id})" class="text-red-400 hover:text-red-500">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>`;
+      });
+      document.getElementById('grocery-list').innerHTML = html || '<p class="text-zinc-500 text-center py-8">No items yet. Add some!</p>';
+    }
+
+    function addGroceryItem() {
+      const itemName = prompt("Enter grocery item name:");
+      if (!itemName) return;
+      const category = prompt("Category (e.g., Dairy, Vegetables, Cleaning):") || "General";
+
+      groceryItems.push({
+        id: Date.now(),
+        item: itemName,
+        category: category,
+        addedBy: "You",
+        bought: false
+      });
+      renderGrocery();
+      renderDashboard();
+    }
+
+    function toggleBought(id) {
+      const item = groceryItems.find(g => g.id === id);
+      if (item) {
+        item.bought = !item.bought;
+        renderGrocery();
+        renderDashboard();
+      }
+    }
+
+    function deleteGrocery(id) {
+      if (confirm("Delete this item?")) {
+        groceryItems = groceryItems.filter(g => g.id !== id);
+        renderGrocery();
+        renderDashboard();
+      }
+    }
+
+    function renderMembers() {
+      let html = '';
+      members.forEach(m => {
+        html += `
+          <div class="bg-zinc-900 rounded-3xl p-6 border border-zinc-800 text-center">
+            <div class="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center text-4xl mb-4" style="background-color:${m.color}30; color:${m.color}">
+              ${m.name[0]}
+            </div>
+            <p class="font-semibold">${m.name}</p>
+            <p class="text-xs text-zinc-400 mt-1">${m.role}</p>
+          </div>`;
+      });
+      document.getElementById('members-grid').innerHTML = html;
+    }
+
+    // Initialize
+    showSection('dashboard');
+  </script>
+</body>
+
+</html>
